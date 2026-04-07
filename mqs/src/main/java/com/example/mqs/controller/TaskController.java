@@ -13,8 +13,8 @@ public class TaskController {
         this.mqs = mqs;
     }
 
-    @GetMapping("/test")
-    public HttpStatusCode test(@RequestParam String message){
+    @GetMapping("/task")
+    public HttpStatusCode doTask(@RequestParam String message){
         return mqs.publish("tasks", message);
     }
 }

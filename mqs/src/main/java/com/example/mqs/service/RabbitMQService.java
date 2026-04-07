@@ -3,6 +3,7 @@ package com.example.mqs.service;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.MessageProperties;
 import jakarta.annotation.PreDestroy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -37,10 +38,11 @@ public class RabbitMQService implements iMessageQueueService{
             Map<String, Object> args = Map.of("x-queue-type", "quorum");
             channel.queueDeclare(channelName, true, false, false, args);
 
-            channel.basicPublish("", channelName, null, message.getBytes());
+            channel.basicPublish("", channelName, MessageProperties.PERSISTENT_TEXT_PLAIN, message.getBytes());
+
             System.out.println(" [x] Sent '" + message + "'");
 
-            return HttpStatus.OK;
+            return HttpStatus.ACCEPTED;
 
         } catch (IOException | TimeoutException e){
             System.out.println(e.getMessage());

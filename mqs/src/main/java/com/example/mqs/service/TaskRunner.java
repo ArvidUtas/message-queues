@@ -26,38 +26,32 @@ public class TaskRunner {
     public void start() throws IOException, TimeoutException{
         String channelName = "tasks";
         channel = msq.subscribe(channelName);
-        DeliverCallback deliverCallback = (consumerTag, delivery) -> {
-            executor.submit(() -> {
-                String message = new String(delivery.getBody(), StandardCharsets.UTF_8);
+        DeliverCallback deliverCallback = (consumerTag, delivery) -> executor.submit(() -> {
+            String message = new String(delivery.getBody(), StandardCharsets.UTF_8);
 
-                System.out.println(" [x] Received '" + message + "'");
+            System.out.println(" [x] Received '" + message + "'");
 
+            try {
                 String returnMessage = doWork(message);
 
-                try {
-                    channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+                channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
 
-                System.out.println(" [x] Done: " + returnMessage);
-            });
-        };
+                System.out.println(" [x] Done: '" + returnMessage + "'");
+            } catch (IOException | InterruptedException e) {
+                System.err.println(" [ ] Fail: '" + message + "'. Error: '" + e.getMessage() + "'");
+            }
+        });
         boolean autoAck = false;
         channel.basicConsume(channelName, autoAck, deliverCallback, consumerTag -> { });
     }
 
-    private String doWork(String message){
-        try{
-            StringBuilder reverse = new StringBuilder();
-            for (int i = message.length() - 1; i>=0; i-- ){
-                reverse.append(message.charAt(i));
-                Thread.sleep(i* 100L);
-            }
-            return reverse.toString();
-        } catch (InterruptedException e){
-            return e.getMessage();
+    private String doWork(String message) throws InterruptedException {
+        StringBuilder reverse = new StringBuilder();
+        for (int i = message.length() - 1; i>=0; i-- ){
+            reverse.append(message.charAt(i));
+            Thread.sleep(i* 100L);
         }
+        return reverse.toString();
     }
 
     @PreDestroy
