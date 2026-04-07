@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
@@ -24,21 +26,27 @@ public class TaskRunner {
 
     @PostConstruct
     public void start() throws IOException, TimeoutException{
+        String exchangeName = "main";
         String channelName = "tasks";
-        channel = msq.subscribe(channelName);
+        channel = msq.subscribe(exchangeName, channelName);
         DeliverCallback deliverCallback = (consumerTag, delivery) -> executor.submit(() -> {
             String message = new String(delivery.getBody(), StandardCharsets.UTF_8);
 
-            System.out.println(" [x] Received '" + message + "'");
+            System.out.println(LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss.SSSS")) +
+                    " [x] Received in TaskRunner '" + message + "'");
 
             try {
                 String returnMessage = doWork(message);
 
                 channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
 
-                System.out.println(" [x] Done: '" + returnMessage + "'");
+                System.out.println(LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss.SSSS")) +
+                        " [x] Done: '" + returnMessage + "'");
+
+                msq.publish("post", message);
             } catch (IOException | InterruptedException e) {
-                System.err.println(" [ ] Fail: '" + message + "'. Error: '" + e.getMessage() + "'");
+                System.err.println(LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss.SSSS")) +
+                        " [ ] Fail: '" + message + "'. Error: '" + e.getMessage() + "'");
             }
         });
         boolean autoAck = false;

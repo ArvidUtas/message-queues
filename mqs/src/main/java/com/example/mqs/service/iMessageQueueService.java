@@ -6,6 +6,6 @@ import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
 public interface iMessageQueueService {
-    Channel subscribe(String channelName) throws IOException, TimeoutException;
-    HttpStatusCode publish(String channelName, String message);
+    Channel subscribe(String exchangeName, String queueName) throws IOException, TimeoutException;
+    HttpStatusCode publish(String exchangeName, String message);
 }
