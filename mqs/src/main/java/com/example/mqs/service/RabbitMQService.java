@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
@@ -23,24 +25,29 @@ public class RabbitMQService implements iMessageQueueService{
         this.connection = factory.newConnection();
     }
     @Override
-    public Channel subscribe(String channelName) throws IOException {
+    public Channel subscribe(String exchangeName, String queueName) throws IOException {
         Channel channel = connection.createChannel();
+
+        channel.exchangeDeclare(exchangeName, "fanout");
+
         Map<String, Object> args = Map.of("x-queue-type", "quorum");
-        channel.queueDeclare(channelName, true, false, false, args);
-        System.out.println(" [*] Waiting for messages.");
+        channel.queueDeclare(queueName, true, false, false, args);
+        channel.queueBind(queueName, exchangeName, "");
+
+        System.out.println(LocalTime.now() + " [*] Waiting for messages.");
+
         return channel;
     }
 
     @Override
-    public HttpStatusCode publish(String channelName, String message) {
+    public HttpStatusCode publish(String exchangeName, String message) {
         try (Channel channel = connection.createChannel()){
+            channel.exchangeDeclare(exchangeName, "fanout");
 
-            Map<String, Object> args = Map.of("x-queue-type", "quorum");
-            channel.queueDeclare(channelName, true, false, false, args);
+            channel.basicPublish(exchangeName, "", MessageProperties.PERSISTENT_TEXT_PLAIN, message.getBytes());
 
-            channel.basicPublish("", channelName, MessageProperties.PERSISTENT_TEXT_PLAIN, message.getBytes());
-
-            System.out.println(" [x] Sent '" + message + "'");
+            System.out.println(LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss.SSSS")) +
+                    " [x] Published '" + message + "' in Exchange: " + exchangeName);
 
             return HttpStatus.ACCEPTED;
 

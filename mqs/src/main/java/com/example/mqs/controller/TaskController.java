@@ -15,6 +15,6 @@ public class TaskController {
 
     @GetMapping("/task")
     public HttpStatusCode doTask(@RequestParam String message){
-        return mqs.publish("tasks", message);
+        return mqs.publish("main", message);
     }
 }
